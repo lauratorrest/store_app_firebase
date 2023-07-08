@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:productos_app/providers/product_form_provider.dart';
 import 'package:productos_app/services/services.dart';
@@ -58,7 +59,20 @@ class _ProductScreenBody extends StatelessWidget {
                   right: 20,
                   child: IconButton(
                     icon: Icon(Icons.camera_alt_outlined, size: 25, color: Colors.white),
-                    onPressed: (){}
+                    onPressed: () async {
+
+                      final picker = ImagePicker();
+                      final XFile? pickedFile = await picker.pickImage(
+                        source: ImageSource.camera,
+                        //source: ImageSource.gallery,
+                        imageQuality: 100
+                      );
+
+                      if(pickedFile == null){
+                        return;
+                      }
+                      productService.updateSelectedProductImage(pickedFile.path);
+                    }
                   )
                 )
               ],
@@ -74,8 +88,12 @@ class _ProductScreenBody extends StatelessWidget {
 
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.save_outlined),
-        onPressed: (){
+        onPressed: () async {
           if(!productForm.isValidForm()) return;
+          final String? imageUrl = await productService.uploadImage();
+
+          if(imageUrl != null) productForm.product.picture = imageUrl;
+
           productService.saveCreateProduct(productForm.product);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text("Cambios guardados con éxito. ✔️"),
@@ -117,6 +135,7 @@ class _ProductForm extends StatelessWidget {
                   if(value == null || value.length < 1){
                     return 'El nombre es obligatorio';
                   }
+                  return null;
                 },
                 decoration: InputDecorations.authInputDecoration(
                   hintText: 'Nombre de producto',

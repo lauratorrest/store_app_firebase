@@ -4,6 +4,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +15,8 @@ class ProductsService extends ChangeNotifier{
   final String _baseUrl = 'flutter-varios-c603c-default-rtdb.firebaseio.com';
   static List<Product> products = [];
   late Product selectedProduct;
+
+  File? newPictureFile;
 
   bool isLoading = true;
   bool isSaving = false;
@@ -85,16 +88,31 @@ class ProductsService extends ChangeNotifier{
 
   }
 
-  //Future<void> deleteProduct(String id) async {
-  //  final url = Uri.https(_baseUrl, 'products/$id.json');
-  //  final resp = await http.delete(url);
-//
-  //  if (resp.statusCode == 200) {
-  //    products.removeWhere((product) => product.id == id);
-  //    notifyListeners();
-  //  } else {
-  //    throw Exception('Error al eliminar el producto');
-  //  }
-  //}
+  void updateSelectedProductImage(String path){
+    selectedProduct.picture = path;
+    newPictureFile = File.fromUri(Uri(path: path));
 
+    notifyListeners();
+  }
+
+  Future<String?> uploadImage() async{
+    if(newPictureFile == null) return null;
+
+    isSaving = true;
+    notifyListeners();
+
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/du1lw1gw9/image/upload?upload_preset=mhpydicu');
+
+    final imageUploadRequest = http.MultipartRequest('POST',url);
+
+    final file = await http.MultipartFile.fromPath('file', newPictureFile!.path);
+
+    imageUploadRequest.files.add(file);
+
+    final streamResponse = await imageUploadRequest.send();
+    final resp = await http.Response.fromStream(streamResponse);
+
+    final decodedData = json.decode(resp.body);
+    return decodedData['secure_url'];
+  }
 }
